@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -64,27 +65,84 @@ def to_csv_bytes(df: pd.DataFrame) -> bytes:
 
 
 def prepare_turnover_for_plot(turn_df: pd.DataFrame, lower_q: float = 0.01, upper_q: float = 0.99) -> pd.DataFrame:
-    """
-    Make turnover charting more stable:
-    - drop null/non-positive values
-    - clip extremes to quantile band
-    - add 7-observation rolling trend
-    """
     if turn_df.empty:
         return turn_df.copy()
-
     d = turn_df.copy()
     d = d.dropna(subset=["report_date", "turnover_ugx"])
     d = d[d["turnover_ugx"] > 0]
     if d.empty:
         return d
-
     d = d.sort_values("report_date")
     lo = d["turnover_ugx"].quantile(lower_q)
     hi = d["turnover_ugx"].quantile(upper_q)
     d["turnover_ugx_clipped"] = d["turnover_ugx"].clip(lower=max(lo, 0), upper=hi)
-    d["turnover_7d_ma"] = d["turnover_ugx_clipped"].rolling(7, min_periods=1).mean()
+    d["turnover_7obs_ma"] = d["turnover_ugx_clipped"].rolling(7, min_periods=1).mean()
     return d
+
+
+def to_ugx_billion(series: pd.Series) -> pd.Series:
+    return series / 1_000_000_000.0
+
+
+def aggregate_curve(curve_df: pd.DataFrame, tenor_step: float = 0.25) -> pd.DataFrame:
+    if curve_df.empty:
+        return curve_df.copy()
+    d = curve_df.copy()
+    d = d.dropna(subset=["tenor_years", "yield_pct"])
+    if d.empty:
+        return d
+    d["tenor_bin"] = (d["tenor_years"] / tenor_step).round() * tenor_step
+
+    if "turnover_ugx" in d.columns and d["turnover_ugx"].fillna(0).sum() > 0:
+        d["w"] = d["turnover_ugx"].fillna(0).clip(lower=0)
+        grouped = (
+            d.groupby(["tenor_bin", "instrument_type"], dropna=False)
+            .apply(lambda x: np.average(x["yield_pct"], weights=np.where(x["w"] > 0, x["w"], 1)))
+            .reset_index(name="yield_pct")
+        )
+    else:
+        grouped = (
+            d.groupby(["tenor_bin", "instrument_type"], dropna=False)["yield_pct"]
+            .median()
+            .reset_index()
+        )
+
+    grouped = grouped.rename(columns={"tenor_bin": "tenor_years"}).sort_values("tenor_years")
+    return grouped
+
+
+def compute_auction_surprise(auction_df: pd.DataFrame) -> tuple:
+    """
+    Surprise is computed within matched cohort:
+    instrument_type + tenor_bucket where available.
+    """
+    if auction_df.empty or "yield_pct" not in auction_df.columns:
+        return None, None, None
+    y = auction_df.dropna(subset=["yield_pct", "report_date"]).sort_values("report_date")
+    if len(y) < 3:
+        return None, None, None
+
+    last = y.iloc[-1]
+    if "tenor_bucket" in y.columns and pd.notna(last.get("tenor_bucket", np.nan)):
+        cohort = y[
+            (y["instrument_type"] == last.get("instrument_type"))
+            & (y["tenor_bucket"] == last.get("tenor_bucket"))
+        ]
+    else:
+        cohort = y[y["instrument_type"] == last.get("instrument_type")]
+
+    if len(cohort) < 3:
+        return None, None, None
+
+    prior = cohort.iloc[:-1].tail(12)
+    if prior.empty:
+        return None, None, None
+
+    actual = float(last["yield_pct"])
+    expected = float(prior["yield_pct"].mean())
+    delta = actual - expected
+    label = f"{last.get('instrument_type', 'n/a')} | {last.get('tenor_bucket', 'n/a')}"
+    return delta, actual, label
 
 
 def enforce_auth():
@@ -93,7 +151,6 @@ def enforce_auth():
     if not PASSCODE:
         st.error("Auth is enabled but no passcode configured. Set APP_PASSCODE or secrets.app.passcode.")
         st.stop()
-
     with st.sidebar:
         st.subheader("Access")
         user_code = st.text_input("Passcode", type="password")
@@ -111,7 +168,7 @@ with st.sidebar:
     data_path = st.text_input("Unified dataset CSV path", value=DEFAULT_DATA_PATH)
     page = st.radio(
         "Page",
-        ["Dashboard", "Auctions", "Secondary", "Yield Curve", "Instruments", "Alerts", "Ops"],
+        ["Dashboard", "Auctions", "Secondary", "Yield Curve", "Instruments", "Alerts", "Methodology", "Ops"],
         index=0,
     )
 
@@ -148,6 +205,8 @@ with st.sidebar:
     st.subheader("Chart options")
     use_log_scale = st.checkbox("Log scale for turnover charts", value=False)
     robust_turnover = st.checkbox("Robust turnover scaling (outlier clipping)", value=True)
+    turnover_in_bn = st.checkbox("Show turnover in UGX billions", value=True)
+    min_trades_for_avg_size = st.slider("Min trade count for avg-size chart", min_value=1, max_value=50, value=3)
 
 f_df = df.copy()
 if selected_itypes:
@@ -188,15 +247,25 @@ if page == "Dashboard":
     if not turn_f.empty:
         turn_plot = prepare_turnover_for_plot(turn_f) if robust_turnover else turn_f.sort_values("report_date")
         y_col = "turnover_ugx_clipped" if robust_turnover and "turnover_ugx_clipped" in turn_plot.columns else "turnover_ugx"
-        fig = px.line(turn_plot, x="report_date", y=y_col, title="Turnover (UGX)")
-        if "turnover_7d_ma" in turn_plot.columns:
+        y_title = "Turnover (UGX)"
+        if turnover_in_bn:
+            turn_plot["turnover_plot"] = to_ugx_billion(turn_plot[y_col])
+            turn_plot["turnover_7obs_ma_plot"] = to_ugx_billion(turn_plot["turnover_7obs_ma"]) if "turnover_7obs_ma" in turn_plot.columns else np.nan
+            y_col = "turnover_plot"
+            y_title = "Turnover (UGX bn)"
+        else:
+            if "turnover_7obs_ma" in turn_plot.columns:
+                turn_plot["turnover_7obs_ma_plot"] = turn_plot["turnover_7obs_ma"]
+
+        fig = px.line(turn_plot, x="report_date", y=y_col, title="Daily Secondary Turnover")
+        if "turnover_7obs_ma_plot" in turn_plot.columns:
             fig.add_scatter(
                 x=turn_plot["report_date"],
-                y=turn_plot["turnover_7d_ma"],
+                y=turn_plot["turnover_7obs_ma_plot"],
                 mode="lines",
                 name="7-observation MA",
             )
-        fig.update_layout(yaxis_tickformat=",.0f")
+        fig.update_layout(xaxis_title="Report Date", yaxis_title=y_title, yaxis_tickformat=",.2f" if turnover_in_bn else ",.0f")
         if use_log_scale:
             fig.update_yaxes(type="log")
         st.plotly_chart(fig, use_container_width=True)
@@ -206,7 +275,19 @@ if page == "Dashboard":
     st.subheader("Latest Yield Curve Snapshot")
     lc = latest_curve(f_df)
     if not lc.empty:
-        fig2 = px.line(lc, x="tenor_years", y="yield_pct", color="instrument_type", markers=True, title="Latest Curve")
+        lc_plot = lc.copy()
+        if "turnover_ugx" not in lc_plot.columns:
+            lc_plot["turnover_ugx"] = np.nan
+        lc_agg = aggregate_curve(lc_plot)
+        fig2 = px.line(
+            lc_agg,
+            x="tenor_years",
+            y="yield_pct",
+            color="instrument_type",
+            markers=True,
+            title="Latest Curve (aggregated by tenor bin)",
+        )
+        fig2.update_layout(xaxis_title="Tenor (Years)", yaxis_title="Yield (%)", yaxis_tickformat=".2f")
         st.plotly_chart(fig2, use_container_width=True)
     else:
         st.info("No curve data available.")
@@ -221,13 +302,15 @@ elif page == "Auctions":
         y = f_auctions.dropna(subset=["yield_pct"]).sort_values("report_date")
         if not y.empty:
             fig = px.line(y, x="report_date", y="yield_pct", color="instrument_type", title="Auction Yield Trend")
+            fig.update_layout(xaxis_title="Report Date", yaxis_title="Yield (%)", yaxis_tickformat=".2f")
             st.plotly_chart(fig, use_container_width=True)
 
-            recent = y.tail(15)
-            if len(recent) >= 2:
-                actual = recent.iloc[-1]["yield_pct"]
-                expected = recent.iloc[:-1]["yield_pct"].mean()
-                st.metric("Auction Surprise (pp)", f"{actual - expected:+.2f}", help="Actual latest yield minus trailing average")
+            delta, actual, cohort_label = compute_auction_surprise(y)
+            if delta is not None:
+                st.metric("Auction Surprise (pp)", f"{delta:+.2f}", help=f"Cohort-based surprise on {cohort_label}")
+                st.caption(f"Cohort used: {cohort_label} | Latest actual yield: {actual:.2f}%")
+            else:
+                st.info("Insufficient matched cohort history to compute auction surprise robustly.")
 
     st.download_button("Download auctions CSV", to_csv_bytes(f_auctions), file_name="auctions_filtered.csv", mime="text/csv")
 
@@ -240,25 +323,64 @@ elif page == "Secondary":
         if not turn_f.empty:
             turn_plot = prepare_turnover_for_plot(turn_f) if robust_turnover else turn_f.sort_values("report_date")
             y_col = "turnover_ugx_clipped" if robust_turnover and "turnover_ugx_clipped" in turn_plot.columns else "turnover_ugx"
-            fig = px.bar(turn_plot.tail(60), x="report_date", y=y_col, title="Daily Turnover (Last 60 Obs)")
-            fig.update_layout(yaxis_tickformat=",.0f")
+            y_title = "Turnover (UGX)"
+            if turnover_in_bn:
+                turn_plot["turnover_plot"] = to_ugx_billion(turn_plot[y_col])
+                y_col = "turnover_plot"
+                y_title = "Turnover (UGX bn)"
+            fig = px.bar(turn_plot.tail(60), x="report_date", y=y_col, title="Daily Turnover (Last 60 observations)")
+            fig.update_layout(xaxis_title="Report Date", yaxis_title=y_title, yaxis_tickformat=",.2f" if turnover_in_bn else ",.0f")
             if use_log_scale:
                 fig.update_yaxes(type="log")
             st.plotly_chart(fig, use_container_width=True)
     with c2:
         if not turn_f.empty:
-            turn_plot = prepare_turnover_for_plot(turn_f) if robust_turnover else turn_f.sort_values("report_date")
-            fig2 = px.line(turn_plot.tail(120), x="report_date", y="avg_trade_size_ugx", title="Avg Trade Size")
-            fig2.update_layout(yaxis_tickformat=",.0f")
-            st.plotly_chart(fig2, use_container_width=True)
+            avg_plot = turn_f.sort_values("report_date").copy()
+            avg_plot = avg_plot[avg_plot["trade_count"] >= min_trades_for_avg_size]
+            if not avg_plot.empty:
+                avg_plot["avg_size_7obs_median"] = avg_plot["avg_trade_size_ugx"].rolling(7, min_periods=1).median()
+                fig2 = px.line(avg_plot.tail(120), x="report_date", y="avg_trade_size_ugx", title="Average Trade Size")
+                fig2.add_scatter(
+                    x=avg_plot.tail(120)["report_date"],
+                    y=avg_plot.tail(120)["avg_size_7obs_median"],
+                    mode="lines",
+                    name="7-observation median",
+                )
+                fig2.update_layout(xaxis_title="Report Date", yaxis_title="Avg Trade Size (UGX)", yaxis_tickformat=",.0f")
+                st.plotly_chart(fig2, use_container_width=True)
+            else:
+                st.info("No days meet minimum trade-count filter for average-size chart.")
 
     st.subheader("Liquidity Around Auction Dates (D0-D+2)")
     awf = auction_window_liquidity(f_secondary, f_auctions, window_days=2)
     if not awf.empty:
-        agg = awf.groupby("offset", as_index=False)["turnover_ugx"].mean()
-        fig3 = px.bar(agg, x="offset", y="turnover_ugx", title="Average Turnover by Offset")
+        aw_plot = awf.copy()
+        aw_plot = aw_plot[aw_plot["turnover_ugx"] > 0]
+        if turnover_in_bn:
+            aw_plot["turnover_plot"] = to_ugx_billion(aw_plot["turnover_ugx"])
+            y_col = "turnover_plot"
+            y_title = "Turnover (UGX bn)"
+        else:
+            y_col = "turnover_ugx"
+            y_title = "Turnover (UGX)"
+
+        fig3 = px.box(
+            aw_plot,
+            x="offset",
+            y=y_col,
+            points="outliers",
+            title="Liquidity by Auction Offset (distribution view)",
+        )
+        fig3.update_layout(xaxis_title="Offset from Auction", yaxis_title=y_title, yaxis_tickformat=",.2f" if turnover_in_bn else ",.0f")
         st.plotly_chart(fig3, use_container_width=True)
-        st.dataframe(awf.tail(100), use_container_width=True)
+
+        summary = (
+            aw_plot.groupby("offset")[y_col]
+            .agg(["count", "median", "mean", lambda x: x.quantile(0.25), lambda x: x.quantile(0.75)])
+            .reset_index()
+        )
+        summary.columns = ["offset", "obs", "median", "mean", "p25", "p75"]
+        st.dataframe(summary.sort_values("offset"), use_container_width=True)
     else:
         st.info("No auction-window liquidity data available.")
 
@@ -283,10 +405,25 @@ elif page == "Yield Curve":
         curve_cmp = pd.concat([c1, c2], ignore_index=True)
 
         if not curve_cmp.empty:
-            fig = px.line(curve_cmp, x="tenor_years", y="yield_pct", color="snapshot", markers=True, title="Curve Comparison")
+            curve_cmp["turnover_ugx"] = np.nan
+            out = []
+            for snap in curve_cmp["snapshot"].dropna().unique():
+                temp = aggregate_curve(curve_cmp[curve_cmp["snapshot"] == snap])
+                temp["snapshot"] = snap
+                out.append(temp)
+            plot_df = pd.concat(out, ignore_index=True) if out else pd.DataFrame()
+            fig = px.line(
+                plot_df,
+                x="tenor_years",
+                y="yield_pct",
+                color="snapshot",
+                markers=True,
+                title="Curve Comparison (aggregated by tenor bin)",
+            )
+            fig.update_layout(xaxis_title="Tenor (Years)", yaxis_title="Yield (%)", yaxis_tickformat=".2f")
             st.plotly_chart(fig, use_container_width=True)
-            st.dataframe(curve_cmp.sort_values(["snapshot", "tenor_years"]), use_container_width=True)
-            st.download_button("Download curve comparison CSV", to_csv_bytes(curve_cmp), file_name="curve_comparison.csv", mime="text/csv")
+            st.dataframe(plot_df.sort_values(["snapshot", "tenor_years"]), use_container_width=True)
+            st.download_button("Download curve comparison CSV", to_csv_bytes(plot_df), file_name="curve_comparison.csv", mime="text/csv")
         else:
             st.info("No curve points available for chosen dates.")
 
@@ -315,6 +452,61 @@ elif page == "Alerts":
     alerts_f = alerts[alerts["severity"].isin(sev)] if sev else alerts
     st.dataframe(alerts_f, use_container_width=True)
     st.download_button("Download alerts CSV", to_csv_bytes(alerts_f), file_name="alerts.csv", mime="text/csv")
+
+elif page == "Methodology":
+    st.subheader("Methodology")
+    st.markdown(
+        """
+### 1) Data sourcing
+- Primary source of truth is a remote CSV URL configured in `data_loader.py` (`DEFAULT_DATA_PATH`).
+- Loader applies retry logic for remote reads.
+- If remote fetch fails, loader attempts local fallback (`LOCAL_FALLBACK_CSV`, default `data/latest_unified.csv`).
+
+### 2) Data preparation
+- Date parsing: `report_date`, `auction_date`, `value_date`, `maturity_date`, `settlement_date` parsed to datetime.
+- Numeric coercion: amount, yield, coupon, and price fields cast to numeric with safe coercion.
+- Turnover normalization: if `turnover_ugx` missing, fallback to `amount_cost_ugx` then `amount_fv_ugx`.
+- Segment tagging:
+  - Auction rows: `record_type=auction_result` or `market_segment=primary_auction`
+  - Secondary rows: `record_type=secondary_trade` or `market_segment=secondary_market`
+
+### 3) Visualization methodology
+- Turnover charts:
+  - Optional robust scaling clips outliers (1st–99th percentile)
+  - Optional log scale
+  - 7-observation moving average
+- Auction surprise:
+  - Computed within matched cohort (`instrument_type + tenor_bucket`) not across mixed tenors
+- Curve charts:
+  - Aggregated by tenor bins (0.25 years) to avoid overplotting and zig-zag noise
+- Liquidity around auctions:
+  - Distribution view (box plot) and summary statistics (`median`, `p25`, `p75`, `mean`)
+
+### 4) Data quality and monitoring
+- Health report checks latest `report_date`, staleness threshold, and expected columns.
+- Runtime logs written to `logs/app.log`.
+- Optional webhook push available from Ops page.
+        """
+    )
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Rows", f"{len(df):,}")
+    c2.metric("Latest report_date", health["latest_report_date"] or "n/a")
+    c3.metric("Stale threshold (hours)", f"{STALE_DATA_HOURS}")
+
+    st.write("**Field completeness snapshot**")
+    comp_cols = [c for c in ["report_date", "instrument_type", "tenor_bucket", "yield_pct", "turnover_ugx", "security_key", "security_isin"] if c in df.columns]
+    comp = []
+    for c in comp_cols:
+        nn = int(df[c].notna().sum())
+        pct = (nn / max(len(df), 1)) * 100.0
+        comp.append({"column": c, "non_null": nn, "completeness_pct": round(pct, 2)})
+    st.dataframe(pd.DataFrame(comp), use_container_width=True)
+
+    if "parse_method" in df.columns:
+        st.write("**Parse method mix**")
+        pm = df["parse_method"].fillna("unknown").value_counts().rename_axis("parse_method").reset_index(name="rows")
+        st.dataframe(pm, use_container_width=True)
 
 else:
     st.subheader("Ops and Monitoring")
