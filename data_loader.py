@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 DEFAULT_DATA_PATH = "https://drive.google.com/uc?export=download&id=17DGvu69IpPPSdh1GSSWAiNLurJqu87Gx"
-DEFAULT_FALLBACK_PATH = os.getenv("LOCAL_FALLBACK_CSV", "data/latest_unified.csv")
+DEFAULT_FALLBACK_PATH = os.getenv("LOCAL_FALLBACK_CSV", "data/serving/bou_unified_master_analysis_dataset_v2.csv")
 
 
 def _to_datetime_safe(series: pd.Series) -> pd.Series:

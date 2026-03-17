@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 logs/
 .streamlit/secrets.toml
+data/lake/raw/
+data/lake/normalized/
+data/lake/curated/
+data/warehouse/
+data/serving/*.csv
+!data/serving/.gitkeep

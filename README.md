@@ -8,8 +8,10 @@ Self-contained clickable MVP for African bond market intelligence (Uganda-first)
 - `ops.py`: health checks, logging, webhook notifications
 - `docs/API_ROUTES.md`: planned API contract for phase-2 backend split
 - `docs/PRODUCTION_CHECKLIST.md`: hardening checklist and next steps
+- `docs/DATA_ARCHITECTURE.md`: lake/warehouse/serving design
 - `scripts/refresh_data.ps1`: refresh local fallback dataset
 - `scripts/health_check.ps1`: freshness preflight check
+- `scripts/refresh_bou_market_data.py`: single reusable BoU scraper/parser pipeline
 - `requirements.txt`: Python dependencies
 
 ## Data Source
@@ -53,3 +55,23 @@ Configure via Streamlit secrets or environment variables:
   - `powershell -ExecutionPolicy Bypass -File .\scripts\refresh_data.ps1`
 - Run health check:
   - `powershell -ExecutionPolicy Bypass -File .\scripts\health_check.ps1`
+
+## BoU single-pipeline run
+Run one command to scrape, parse, normalize, and publish serving extracts:
+
+```powershell
+python .\scripts\refresh_bou_market_data.py --start-date 2025-01-02 --end-date 2026-03-18 --root data
+```
+
+PowerShell wrapper:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_bou_pipeline.ps1 -StartDate 2025-01-02
+```
+
+Outputs:
+- `data/lake/raw` (downloaded source files)
+- `data/lake/normalized` (partitioned parquet)
+- `data/lake/curated` (canonical merged dataset)
+- `data/warehouse/impala_market.duckdb`
+- `data/serving/*.csv`
+- `data/logs/parse_log_*.csv` and summary json
