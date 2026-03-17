@@ -1,7 +1,11 @@
-import pandas as pd
+import os
+import time
+
 import numpy as np
+import pandas as pd
 
 DEFAULT_DATA_PATH = "https://drive.google.com/uc?export=download&id=17DGvu69IpPPSdh1GSSWAiNLurJqu87Gx"
+DEFAULT_FALLBACK_PATH = os.getenv("LOCAL_FALLBACK_CSV", "data/latest_unified.csv")
 
 
 def _to_datetime_safe(series: pd.Series) -> pd.Series:
@@ -12,8 +16,26 @@ def _to_numeric_safe(series: pd.Series) -> pd.Series:
     return pd.to_numeric(series, errors="coerce")
 
 
-def load_data(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
+def _read_csv_with_retry(path: str, retries: int = 3, backoff_seconds: float = 1.5) -> pd.DataFrame:
+    last_error = None
+    for attempt in range(1, retries + 1):
+        try:
+            return pd.read_csv(path)
+        except Exception as exc:
+            last_error = exc
+            if attempt < retries:
+                time.sleep(backoff_seconds * attempt)
+    raise last_error
+
+
+def load_data(path: str, fallback_path: str = DEFAULT_FALLBACK_PATH) -> pd.DataFrame:
+    try:
+        df = _read_csv_with_retry(path)
+    except Exception:
+        if fallback_path and os.path.exists(fallback_path):
+            df = _read_csv_with_retry(fallback_path)
+        else:
+            raise
 
     for c in ["report_date", "auction_date", "value_date", "maturity_date", "settlement_date"]:
         if c in df.columns:
@@ -93,20 +115,29 @@ def auction_window_liquidity(secondary: pd.DataFrame, auctions: pd.DataFrame, wi
         return pd.DataFrame(columns=["auction_date", "offset", "turnover_ugx", "trade_count"])
 
     auction_dates = auctions["report_date"].dropna().drop_duplicates().sort_values()
-    sec = secondary.copy()
-    sec = sec.dropna(subset=["report_date"])
+    sec = secondary.copy().dropna(subset=["report_date"])
+    sec_idx = sec.groupby("report_date", dropna=True).agg(
+        turnover_ugx=("turnover_ugx", "sum"),
+        trade_count=("turnover_ugx", "count"),
+    )
 
     rows = []
     for ad in auction_dates:
         for offset in range(0, window_days + 1):
             day = ad + pd.Timedelta(days=offset)
-            day_df = sec[sec["report_date"] == day]
+            if day in sec_idx.index:
+                row = sec_idx.loc[day]
+                turnover_ugx = float(row["turnover_ugx"])
+                trade_count = int(row["trade_count"])
+            else:
+                turnover_ugx = 0.0
+                trade_count = 0
             rows.append(
                 {
                     "auction_date": ad,
                     "offset": f"D+{offset}",
-                    "turnover_ugx": day_df["turnover_ugx"].sum(),
-                    "trade_count": len(day_df),
+                    "turnover_ugx": turnover_ugx,
+                    "trade_count": trade_count,
                 }
             )
     return pd.DataFrame(rows)

@@ -1,23 +1,53 @@
-import streamlit as st
+import os
+from pathlib import Path
+
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 
 from data_loader import (
     DEFAULT_DATA_PATH,
-    load_data,
+    auction_window_liquidity,
+    build_alerts,
+    curve_snapshot,
+    daily_turnover,
     get_auctions,
     get_secondary,
-    daily_turnover,
-    auction_window_liquidity,
     latest_curve,
-    curve_snapshot,
-    build_alerts,
+    load_data,
 )
+from ops import build_health_report, ensure_logger, maybe_send_webhook
 
 st.set_page_config(page_title="Bond Market Intelligence MVP", layout="wide")
+logger = ensure_logger(Path(__file__).resolve().parent / "logs")
 
 
-@st.cache_data(show_spinner=False)
+def _bool(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _secrets():
+    try:
+        if "app" in st.secrets:
+            return st.secrets["app"]
+    except Exception:
+        pass
+    return {}
+
+
+APP = _secrets()
+AUTH_REQUIRED = _bool(APP.get("auth_required", os.getenv("APP_AUTH_REQUIRED", "false")))
+PASSCODE = str(APP.get("passcode", os.getenv("APP_PASSCODE", ""))).strip()
+CACHE_TTL_SECONDS = int(APP.get("cache_ttl_seconds", os.getenv("CACHE_TTL_SECONDS", "900")))
+STALE_DATA_HOURS = int(APP.get("stale_data_hours", os.getenv("STALE_DATA_HOURS", "48")))
+WEBHOOK_URL = str(APP.get("webhook_url", os.getenv("WEBHOOK_URL", ""))).strip()
+
+
+@st.cache_data(show_spinner=False, ttl=CACHE_TTL_SECONDS)
 def get_data(path: str):
     df = load_data(path)
     auctions = get_auctions(df)
@@ -33,25 +63,48 @@ def to_csv_bytes(df: pd.DataFrame) -> bytes:
     return df.to_csv(index=False).encode("utf-8")
 
 
+def enforce_auth():
+    if not AUTH_REQUIRED:
+        return
+    if not PASSCODE:
+        st.error("Auth is enabled but no passcode configured. Set APP_PASSCODE or secrets.app.passcode.")
+        st.stop()
+
+    with st.sidebar:
+        st.subheader("Access")
+        user_code = st.text_input("Passcode", type="password")
+        if user_code != PASSCODE:
+            st.warning("Enter valid passcode to continue.")
+            st.stop()
+
+
 st.title("African Bond Market Intelligence - Clickable MVP")
 st.caption("Uganda-first prototype (auctions, secondary liquidity, curves, alerts)")
+enforce_auth()
 
 with st.sidebar:
     st.header("Controls")
     data_path = st.text_input("Unified dataset CSV path", value=DEFAULT_DATA_PATH)
     page = st.radio(
         "Page",
-        ["Dashboard", "Auctions", "Secondary", "Yield Curve", "Instruments", "Alerts"],
+        ["Dashboard", "Auctions", "Secondary", "Yield Curve", "Instruments", "Alerts", "Ops"],
         index=0,
     )
 
 try:
     df, auctions, secondary, turnover, auction_window, lcurve, alerts = get_data(data_path)
 except Exception as ex:
+    logger.exception("Data load failure: %s", ex)
     st.error(f"Failed to load data: {ex}")
     st.stop()
 
-# Shared filters
+health = build_health_report(
+    df=df,
+    source_path=data_path,
+    stale_hours=STALE_DATA_HOURS,
+    expected_columns=("report_date", "instrument_type", "record_type", "market_segment", "security_key"),
+)
+
 with st.sidebar:
     st.subheader("Filters")
     if "instrument_type" in df.columns:
@@ -60,9 +113,13 @@ with st.sidebar:
     else:
         selected_itypes = []
 
-    min_date = df["report_date"].min()
-    max_date = df["report_date"].max()
+    min_date = pd.to_datetime(df["report_date"].min())
+    max_date = pd.to_datetime(df["report_date"].max())
     date_range = st.date_input("Report Date Range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
+
+    if st.button("Clear cache"):
+        st.cache_data.clear()
+        st.success("Cache cleared.")
 
 f_df = df.copy()
 if selected_itypes:
@@ -88,7 +145,15 @@ if page == "Dashboard":
     c1.metric("Rows (filtered)", f"{len(f_df):,}")
     c2.metric("Auction Rows", f"{len(f_auctions):,}")
     c3.metric("Secondary Rows", f"{len(f_secondary):,}")
-    c4.metric("Unique ISIN", f"{f_df['security_isin'].dropna().astype(str).str.strip().replace('', pd.NA).dropna().nunique():,}" if "security_isin" in f_df.columns else "n/a")
+    c4.metric(
+        "Unique ISIN",
+        f"{f_df['security_isin'].dropna().astype(str).str.strip().replace('', pd.NA).dropna().nunique():,}"
+        if "security_isin" in f_df.columns
+        else "n/a",
+    )
+
+    if health["is_stale"]:
+        st.warning(f"Data stale warning: latest report date is {health['latest_report_date']}.")
 
     st.subheader("Daily Secondary Turnover")
     turn_f = daily_turnover(f_secondary)
@@ -203,3 +268,36 @@ elif page == "Alerts":
     alerts_f = alerts[alerts["severity"].isin(sev)] if sev else alerts
     st.dataframe(alerts_f, use_container_width=True)
     st.download_button("Download alerts CSV", to_csv_bytes(alerts_f), file_name="alerts.csv", mime="text/csv")
+
+else:
+    st.subheader("Ops and Monitoring")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Rows", f"{health['rows']:,}")
+    c2.metric("Latest report_date", health["latest_report_date"] or "n/a")
+    c3.metric("Data age (hours)", f"{health['data_age_hours']:.1f}" if health["data_age_hours"] is not None else "n/a")
+
+    st.write("**Health summary**")
+    st.json(health)
+
+    if health["missing_columns"]:
+        st.error(f"Missing expected columns: {', '.join(health['missing_columns'])}")
+    if health["is_stale"]:
+        st.warning(f"Staleness threshold breached (> {STALE_DATA_HOURS}h).")
+
+    st.write("**Runtime settings**")
+    st.code(
+        f"CACHE_TTL_SECONDS={CACHE_TTL_SECONDS}\n"
+        f"AUTH_REQUIRED={AUTH_REQUIRED}\n"
+        f"WEBHOOK_CONFIGURED={'yes' if WEBHOOK_URL else 'no'}\n"
+        f"STALE_DATA_HOURS={STALE_DATA_HOURS}",
+        language="bash",
+    )
+
+    if st.button("Send health status to webhook"):
+        ok, msg = maybe_send_webhook(WEBHOOK_URL, "Bond MVP Health", health)
+        if ok:
+            st.success(msg)
+        else:
+            st.error(msg)
+
+logger.info("Rendered page=%s rows=%s", page, len(f_df))
