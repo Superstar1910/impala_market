@@ -149,55 +149,179 @@ def parse_secondary_pdf(pdf_path: Path, report_date: date, source_url: str) -> L
     with pdfplumber.open(str(pdf_path)) as pdf:
         for p in pdf.pages:
             txt_parts.append(p.extract_text() or "")
+            # Table fallback extraction for layout-shifted reports
+            try:
+                tables = p.extract_tables() or []
+                for tbl in tables:
+                    for r in tbl:
+                        if not r:
+                            continue
+                        line = " ".join([str(x).strip() for x in r if x is not None and str(x).strip()])
+                        if line:
+                            txt_parts.append(line)
+            except Exception:
+                pass
     text = "\n".join(txt_parts)
+    # Normalize common PDF unicode artifacts
+    text = (
+        text.replace("\u00a0", " ")
+        .replace("\u2011", "-")
+        .replace("\u2012", "-")
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+        .replace("\u2212", "-")
+    )
+    def _norm_amount(s: str) -> Optional[float]:
+        return normalize_num(re.sub(r"\s+", "", s or ""))
+
+    def _build_row(
+        value_date: str,
+        coupon: str,
+        maturity_date: str,
+        mmy: str,
+        ytm: str,
+        price: str,
+        amount_fv: str,
+        amount_cost: str,
+        parse_method: str,
+        confidence: float,
+    ) -> dict:
+        coupon_num = normalize_num(coupon)
+        instrument_type = "T-Bill" if coupon_num is not None and abs(coupon_num) < 1e-9 else "T-Bond"
+        value_dt = to_date(value_date) or report_date
+        mat_dt = to_date(maturity_date) or report_date
+        return {
+            "market_type": "secondary",
+            "record_type": "secondary_trade",
+            "market_segment": "secondary_market",
+            "report_date": report_date.isoformat(),
+            "auction_date": None,
+            "value_date": value_dt.isoformat(),
+            "maturity_date": mat_dt.isoformat(),
+            "instrument_type": instrument_type,
+            "instrument_label": mmy,
+            "coupon_pct": coupon_num,
+            "yield_pct": normalize_num(ytm),
+            "ytm_pct": normalize_num(ytm),
+            "price_per_100": normalize_num(price),
+            "amount_fv_ugx": _norm_amount(amount_fv),
+            "amount_cost_ugx": _norm_amount(amount_cost),
+            "amount_offered_ugx": None,
+            "amount_tendered_ugx": None,
+            "amount_accepted_ugx": None,
+            "bid_to_cover": None,
+            "security_isin": None,
+            "security_key": None,
+            "tenor_bucket": mmy,
+            "source_url": source_url,
+            "source_file": str(pdf_path),
+            "parse_method": parse_method,
+            "data_confidence_score": confidence,
+        }
+
+    date_pat = r"\d{1,2}(?:[-/ ]|[.])(?:[A-Za-z]{3,9}|\d{1,2})(?:[-/ ]|[.])\d{2,4}"
     # Typical row:
     # 10-Mar-2026 0.000% 08-Jun-2026 3M 10.737 97.323 25,000,000,000 24,330,750,000
     line_re = re.compile(
-        r"(?P<value_date>\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})\s+"
+        rf"(?P<value_date>{date_pat})\s+"
         r"(?P<coupon>\d+(?:\.\d+)?%?)\s+"
-        r"(?P<maturity_date>\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})\s+"
-        r"(?P<mmy>[A-Za-z0-9\.-]+)\s+"
+        rf"(?P<maturity_date>{date_pat})\s+"
+        r"(?P<mmy>[A-Za-z0-9\./\-]+)\s+"
         r"(?P<ytm>\d+(?:\.\d+)?)\s+"
         r"(?P<price>\d+(?:\.\d+)?)\s+"
-        r"(?P<amount_fv>[\d,]+(?:\.\d+)?)\s+"
-        r"(?P<amount_cost>[\d,]+(?:\.\d+)?)"
+        r"(?P<amount_fv>[\d,\s]+(?:\.\d+)?)\s+"
+        r"(?P<amount_cost>[\d,\s]+(?:\.\d+)?)"
     )
-    for ln in text.splitlines():
+    alt_re = re.compile(
+        rf"(?P<value_date>{date_pat}).*?"
+        r"(?P<coupon>\d+(?:\.\d+)?%?)\s+"
+        rf"(?P<maturity_date>{date_pat})\s+"
+        r"(?P<mmy>[A-Za-z0-9\./\-]+)\s+"
+        r"(?P<ytm>\d+(?:\.\d+)?)\s+"
+        r"(?P<price>\d+(?:\.\d+)?)\s+"
+        r"(?P<amount_fv>[\d,\s]+(?:\.\d+)?)\s+"
+        r"(?P<amount_cost>[\d,\s]+(?:\.\d+)?)"
+    )
+    base_lines = [re.sub(r"\s+", " ", x).strip() for x in text.splitlines()]
+    lines: List[str] = []
+    for ln in base_lines:
+        if ln:
+            lines.append(ln)
+    # Handle wrapped rows by also trying adjacent line joins.
+    for i in range(len(base_lines) - 1):
+        a = base_lines[i].strip()
+        b = base_lines[i + 1].strip()
+        if a and b:
+            lines.append(f"{a} {b}")
+
+    for ln in lines:
+        if not ln:
+            continue
         m = line_re.search(ln)
         if not m:
+            m = alt_re.search(ln)
+        if not m:
             continue
-        coupon_num = normalize_num(m.group("coupon"))
-        instrument_type = "T-Bill" if coupon_num is not None and abs(coupon_num) < 1e-9 else "T-Bond"
         rows.append(
-            {
-                "market_type": "secondary",
-                "record_type": "secondary_trade",
-                "market_segment": "secondary_market",
-                "report_date": report_date.isoformat(),
-                "auction_date": None,
-                "value_date": (to_date(m.group("value_date")) or report_date).isoformat(),
-                "maturity_date": (to_date(m.group("maturity_date")) or report_date).isoformat(),
-                "instrument_type": instrument_type,
-                "instrument_label": m.group("mmy"),
-                "coupon_pct": coupon_num,
-                "yield_pct": normalize_num(m.group("ytm")),
-                "ytm_pct": normalize_num(m.group("ytm")),
-                "price_per_100": normalize_num(m.group("price")),
-                "amount_fv_ugx": normalize_num(m.group("amount_fv")),
-                "amount_cost_ugx": normalize_num(m.group("amount_cost")),
-                "amount_offered_ugx": None,
-                "amount_tendered_ugx": None,
-                "amount_accepted_ugx": None,
-                "bid_to_cover": None,
-                "security_isin": None,
-                "security_key": None,
-                "tenor_bucket": m.group("mmy"),
-                "source_url": source_url,
-                "source_file": str(pdf_path),
-                "parse_method": "pdf_regex_secondary",
-                "data_confidence_score": 0.70,
-            }
+            _build_row(
+                m.group("value_date"),
+                m.group("coupon"),
+                m.group("maturity_date"),
+                m.group("mmy"),
+                m.group("ytm"),
+                m.group("price"),
+                m.group("amount_fv"),
+                m.group("amount_cost"),
+                "pdf_regex_secondary",
+                0.70,
+            )
         )
+    # Token-level fallback for layout-shifted PDFs.
+    if not rows:
+        token_date_re = re.compile(rf"^{date_pat}$")
+        num_re = re.compile(r"^[\d,\s]+(?:\.\d+)?$")
+        for ln in lines:
+            toks = ln.split(" ")
+            if len(toks) < 8:
+                continue
+            date_idx = [i for i, t in enumerate(toks) if token_date_re.match(t)]
+            if len(date_idx) < 2:
+                continue
+            i1, i2 = date_idx[0], date_idx[1]
+            if i2 <= i1 + 1:
+                continue
+            coupon_tok = toks[i1 + 1]
+            mmy_idx = i2 + 1
+            if mmy_idx >= len(toks):
+                continue
+            mmy_tok = toks[mmy_idx]
+            tail = toks[mmy_idx + 1 :]
+            tail_nums = [t for t in tail if re.match(r"^\d+(?:\.\d+)?$", t)]
+            if len(tail_nums) < 2:
+                continue
+            amount_tokens = [t for t in tail if num_re.match(t) and ("," in t or len(re.sub(r"\D", "", t)) >= 7)]
+            if len(amount_tokens) < 2:
+                continue
+            rows.append(
+                _build_row(
+                    toks[i1],
+                    coupon_tok,
+                    toks[i2],
+                    mmy_tok,
+                    tail_nums[0],
+                    tail_nums[1],
+                    amount_tokens[0],
+                    amount_tokens[1],
+                    "pdf_token_secondary",
+                    0.55,
+                )
+            )
+    # Deduplicate parsed rows
+    if rows:
+        dedup_df = pd.DataFrame(rows).drop_duplicates(
+            subset=["report_date", "value_date", "maturity_date", "instrument_label", "amount_fv_ugx", "amount_cost_ugx"]
+        )
+        rows = dedup_df.to_dict(orient="records")
     return rows
 
 
@@ -466,15 +590,17 @@ def main() -> int:
                 extracted = xdf.to_dict(orient="records")
 
             parsed_rows.extend(extracted)
+            status = "success" if len(extracted) > 0 else "failed"
+            err = "" if len(extracted) > 0 else "parsed_zero_rows"
             log_rows.append(
                 {
-                    "status": "success",
+                    "status": status,
                     "market_type": item.market_type,
                     "source_url": item.source_url,
                     "report_date": item.report_date.isoformat() if item.report_date else None,
                     "local_path": str(local_path),
                     "parsed_rows": len(extracted),
-                    "error_message": "",
+                    "error_message": err,
                 }
             )
         except Exception as exc:
