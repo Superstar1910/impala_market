@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-DEFAULT_DATA_PATH = r"C:\Users\user\Documents\Impala Market\Test Data\bou_unified_master_analysis_dataset_v2.csv"
+DEFAULT_DATA_PATH = "https://drive.google.com/uc?export=download&id=17DGvu69IpPPSdh1GSSWAiNLurJqu87Gx"
 
 
 def _to_datetime_safe(series: pd.Series) -> pd.Series:
