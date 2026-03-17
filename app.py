@@ -63,6 +63,30 @@ def to_csv_bytes(df: pd.DataFrame) -> bytes:
     return df.to_csv(index=False).encode("utf-8")
 
 
+def prepare_turnover_for_plot(turn_df: pd.DataFrame, lower_q: float = 0.01, upper_q: float = 0.99) -> pd.DataFrame:
+    """
+    Make turnover charting more stable:
+    - drop null/non-positive values
+    - clip extremes to quantile band
+    - add 7-observation rolling trend
+    """
+    if turn_df.empty:
+        return turn_df.copy()
+
+    d = turn_df.copy()
+    d = d.dropna(subset=["report_date", "turnover_ugx"])
+    d = d[d["turnover_ugx"] > 0]
+    if d.empty:
+        return d
+
+    d = d.sort_values("report_date")
+    lo = d["turnover_ugx"].quantile(lower_q)
+    hi = d["turnover_ugx"].quantile(upper_q)
+    d["turnover_ugx_clipped"] = d["turnover_ugx"].clip(lower=max(lo, 0), upper=hi)
+    d["turnover_7d_ma"] = d["turnover_ugx_clipped"].rolling(7, min_periods=1).mean()
+    return d
+
+
 def enforce_auth():
     if not AUTH_REQUIRED:
         return
@@ -121,6 +145,10 @@ with st.sidebar:
         st.cache_data.clear()
         st.success("Cache cleared.")
 
+    st.subheader("Chart options")
+    use_log_scale = st.checkbox("Log scale for turnover charts", value=False)
+    robust_turnover = st.checkbox("Robust turnover scaling (outlier clipping)", value=True)
+
 f_df = df.copy()
 if selected_itypes:
     f_df = f_df[f_df["instrument_type"].isin(selected_itypes)]
@@ -158,7 +186,19 @@ if page == "Dashboard":
     st.subheader("Daily Secondary Turnover")
     turn_f = daily_turnover(f_secondary)
     if not turn_f.empty:
-        fig = px.line(turn_f, x="report_date", y="turnover_ugx", title="Turnover (UGX)")
+        turn_plot = prepare_turnover_for_plot(turn_f) if robust_turnover else turn_f.sort_values("report_date")
+        y_col = "turnover_ugx_clipped" if robust_turnover and "turnover_ugx_clipped" in turn_plot.columns else "turnover_ugx"
+        fig = px.line(turn_plot, x="report_date", y=y_col, title="Turnover (UGX)")
+        if "turnover_7d_ma" in turn_plot.columns:
+            fig.add_scatter(
+                x=turn_plot["report_date"],
+                y=turn_plot["turnover_7d_ma"],
+                mode="lines",
+                name="7-observation MA",
+            )
+        fig.update_layout(yaxis_tickformat=",.0f")
+        if use_log_scale:
+            fig.update_yaxes(type="log")
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("No turnover data for selected filters.")
@@ -198,11 +238,18 @@ elif page == "Secondary":
     c1, c2 = st.columns(2)
     with c1:
         if not turn_f.empty:
-            fig = px.bar(turn_f.tail(60), x="report_date", y="turnover_ugx", title="Daily Turnover (Last 60 Obs)")
+            turn_plot = prepare_turnover_for_plot(turn_f) if robust_turnover else turn_f.sort_values("report_date")
+            y_col = "turnover_ugx_clipped" if robust_turnover and "turnover_ugx_clipped" in turn_plot.columns else "turnover_ugx"
+            fig = px.bar(turn_plot.tail(60), x="report_date", y=y_col, title="Daily Turnover (Last 60 Obs)")
+            fig.update_layout(yaxis_tickformat=",.0f")
+            if use_log_scale:
+                fig.update_yaxes(type="log")
             st.plotly_chart(fig, use_container_width=True)
     with c2:
         if not turn_f.empty:
-            fig2 = px.line(turn_f.tail(120), x="report_date", y="avg_trade_size_ugx", title="Avg Trade Size")
+            turn_plot = prepare_turnover_for_plot(turn_f) if robust_turnover else turn_f.sort_values("report_date")
+            fig2 = px.line(turn_plot.tail(120), x="report_date", y="avg_trade_size_ugx", title="Avg Trade Size")
+            fig2.update_layout(yaxis_tickformat=",.0f")
             st.plotly_chart(fig2, use_container_width=True)
 
     st.subheader("Liquidity Around Auction Dates (D0-D+2)")
