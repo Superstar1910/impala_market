@@ -1,10 +1,14 @@
 import os
 import time
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
 
-DEFAULT_DATA_PATH = "https://drive.google.com/uc?export=download&id=17DGvu69IpPPSdh1GSSWAiNLurJqu87Gx"
+DEFAULT_DATA_PATH = os.getenv(
+    "IMPALA_DATA_PATH",
+    "https://drive.google.com/uc?export=download&id=17DGvu69IpPPSdh1GSSWAiNLurJqu87Gx",
+)
 DEFAULT_FALLBACK_PATH = os.getenv("LOCAL_FALLBACK_CSV", "data/serving/bou_unified_master_analysis_dataset_v2.csv")
 
 
@@ -28,12 +32,16 @@ def _read_csv_with_retry(path: str, retries: int = 3, backoff_seconds: float = 1
     raise last_error
 
 
-def load_data(path: str, fallback_path: str = DEFAULT_FALLBACK_PATH) -> pd.DataFrame:
+def load_data(path: str, fallback_path: str = DEFAULT_FALLBACK_PATH) -> Tuple[pd.DataFrame, str, bool]:
+    source_used = path
+    used_fallback = False
     try:
         df = _read_csv_with_retry(path)
     except Exception:
         if fallback_path and os.path.exists(fallback_path):
             df = _read_csv_with_retry(fallback_path)
+            source_used = fallback_path
+            used_fallback = True
         else:
             raise
 
@@ -75,7 +83,7 @@ def load_data(path: str, fallback_path: str = DEFAULT_FALLBACK_PATH) -> pd.DataF
     if "security_isin" not in df.columns:
         df["security_isin"] = ""
 
-    return df
+    return df, source_used, used_fallback
 
 
 def get_auctions(df: pd.DataFrame) -> pd.DataFrame:

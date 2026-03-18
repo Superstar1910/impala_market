@@ -50,14 +50,14 @@ WEBHOOK_URL = str(APP.get("webhook_url", os.getenv("WEBHOOK_URL", ""))).strip()
 
 @st.cache_data(show_spinner=False, ttl=CACHE_TTL_SECONDS)
 def get_data(path: str):
-    df = load_data(path)
+    df, source_used, used_fallback = load_data(path)
     auctions = get_auctions(df)
     secondary = get_secondary(df)
     turn = daily_turnover(secondary)
     aw = auction_window_liquidity(secondary, auctions, window_days=2)
     lcurve = latest_curve(df)
     alerts = build_alerts(auctions, turn, lcurve)
-    return df, auctions, secondary, turn, aw, lcurve, alerts
+    return df, auctions, secondary, turn, aw, lcurve, alerts, source_used, used_fallback
 
 
 def to_csv_bytes(df: pd.DataFrame) -> bytes:
@@ -173,7 +173,7 @@ with st.sidebar:
     )
 
 try:
-    df, auctions, secondary, turnover, auction_window, lcurve, alerts = get_data(data_path)
+    df, auctions, secondary, turnover, auction_window, lcurve, alerts, source_used, used_fallback = get_data(data_path)
 except Exception as ex:
     logger.exception("Data load failure: %s", ex)
     st.error(f"Failed to load data: {ex}")
@@ -181,12 +181,15 @@ except Exception as ex:
 
 health = build_health_report(
     df=df,
-    source_path=data_path,
+    source_path=source_used,
     stale_hours=STALE_DATA_HOURS,
     expected_columns=("report_date", "instrument_type", "record_type", "market_segment", "security_key"),
 )
 
 with st.sidebar:
+    st.caption(f"Source used: `{source_used}`")
+    if used_fallback:
+        st.warning("Primary source failed; loaded fallback CSV.")
     st.subheader("Filters")
     if "instrument_type" in df.columns:
         itypes = sorted([x for x in df["instrument_type"].dropna().unique().tolist() if str(x).strip()])
