@@ -6,5 +6,10 @@ data/lake/raw/
 data/lake/normalized/
 data/lake/curated/
 data/warehouse/
-data/serving/*.csv
-!data/serving/.gitkeep
+data/logs/
+# data/serving/*.csv is tracked deliberately: the scheduled
+# .github/workflows/refresh-bou-data.yml workflow commits it here as the
+# published, consumer-facing output (e.g. oakstone-allocation-os's
+# packages/connectors/impala_bou.py reads it). Everything upstream of it
+# (raw downloads, normalized/curated partitions, per-run logs) stays
+# untracked and run-local.

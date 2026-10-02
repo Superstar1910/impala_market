@@ -1,0 +1,75 @@
+name: Refresh Bank of Uganda market data
+
+# Scheduled run of scripts/refresh_bou_market_data.py (the single-pipeline
+# BoU scraper/parser), publishing its serving extracts back into this repo
+# so other systems - e.g. oakstone-allocation-os's
+# packages/connectors/impala_bou.py - can fetch a current CSV without
+# running the scraper themselves.
+#
+# The script rebuilds its curated/serving output fresh from a full
+# --start-date/--end-date re-scrape every run (it does not merge with a
+# prior run's output), so this workflow always calls it with its default
+# date range (2025-01-01 through today) rather than a narrow recent window -
+# narrowing the range would silently truncate history out of the committed
+# serving files.
+#
+# Only data/serving/** (small, purpose-built extracts) is committed. The
+# raw PDF/XLS downloads (data/lake/raw) and parsed partitions
+# (data/lake/normalized, data/lake/curated) and per-run logs (data/logs)
+# are left as run-local artifacts, not committed, so the repo does not grow
+# without bound by one copy of BoU's PDFs per day forever.
+
+on:
+  schedule:
+    # Once daily. 06:00 UTC is a reasonable default (gives Bank of Uganda's
+    # own publication process time to post the prior day's reports before
+    # this runs) - adjust if real auction/report timing suggests otherwise.
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-bou-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run BoU refresh pipeline
+        run: python scripts/refresh_bou_market_data.py --root data
+
+      - name: Publish refreshed serving data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/serving
+          if git diff --cached --quiet; then
+            echo "No serving-data changes to publish."
+          else
+            git commit -m "chore: refresh BoU serving data ($(date -u +%Y-%m-%d))"
+            git push
+          fi
+
+      - name: Upload run log as a build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bou-refresh-logs
+          path: data/logs/
+          retention-days: 30
+          if-no-files-found: ignore
