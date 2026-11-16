@@ -1,0 +1,24 @@
+{
+  "status": "PROVISIONAL, NOT VALIDATED",
+  "model_anchor": "end-2026",
+  "post_ifrs16": {
+    "pv_explicit_bn": 19.02394392077461,
+    "pv_terminal_bn": 22.85797274702253,
+    "enterprise_value_bn": 41.88191666779714,
+    "net_debt_bn": 7.272728,
+    "equity_value_bn": 34.60918866779714,
+    "value_per_share": 8.652297166949285,
+    "upside": 0.1536396222599048
+  },
+  "rental_proxy_cross_check": {
+    "pv_explicit_bn": 11.674167041129296,
+    "pv_terminal_bn": 14.700873532986206,
+    "enterprise_value_bn": 26.375040574115502,
+    "net_debt_bn": -0.6272720000000005,
+    "equity_value_bn": 27.002312574115503,
+    "value_per_share": 6.750578143528876,
+    "upside": -0.09992291419614985
+  },
+  "difference_per_share": 1.9017190234204095,
+  "warning": "Arithmetic reproduced; lease renewal/additions, terminal reinvestment, WACC and valuation date remain unresolved."
+}

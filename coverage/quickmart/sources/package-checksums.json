@@ -1,0 +1,172 @@
+[
+  {
+    "path": ".gitignore",
+    "size_bytes": 33,
+    "sha256": "7fb827e8fbed5645e1b5df49b9ba5e7fe438420b89bb29ddeb32a61f56e97be4"
+  },
+  {
+    "path": "COPYRIGHT.md",
+    "size_bytes": 964,
+    "sha256": "b9bd4d4f38359de981deae3400664135fbf9c74d9363156f0d50a296c6fad32e"
+  },
+  {
+    "path": "DISCLAIMER.md",
+    "size_bytes": 826,
+    "sha256": "07e81cfe3eaa65f4350bb9042db1cb7b9c41fc8c90d7d54f5048b6ccf1128bb9"
+  },
+  {
+    "path": "README.md",
+    "size_bytes": 3577,
+    "sha256": "32aa734de4e97bea41c874bf5cabda21eb05ba7d49d04fcf1e984502249cab6f"
+  },
+  {
+    "path": "archive/README.md",
+    "size_bytes": 869,
+    "sha256": "434ddfe707ec88adffc4a895b72779e365e47de2a0b4f3f3c1736b6441f7ad2c"
+  },
+  {
+    "path": "archive/research/Quickmart_IPO_Independent_Buyside_Initiation_Oct2026.html",
+    "size_bytes": 15114,
+    "sha256": "bfa3eaa5b0d54c0517c5d62e2bf0d2ef26def84b8d8a8113a418d28d5344a047"
+  },
+  {
+    "path": "archive/research/Quickmart_IPO_Independent_Buyside_Initiation_Oct2026.pdf",
+    "size_bytes": 107796,
+    "sha256": "ab7fe10965c0b2fa951e0e5fb35388d03b6b99c74593ffb53a62b979ad140c76"
+  },
+  {
+    "path": "archive/research/Quickmart_IPO_Legesi_Investor_Research.html",
+    "size_bytes": 2953872,
+    "sha256": "0f16bf8167e01ea6fd40e11a3e1ae6d728f63dd3264880d99a83865cbf44fe19"
+  },
+  {
+    "path": "archive/research/Quickmart_IPO_Legesi_One_Page_Updated_Oct2026.html",
+    "size_bytes": 3743,
+    "sha256": "99c5c3349b3629956a27a85c89fc119484c066eebdf6d55e8e714f80cd493094"
+  },
+  {
+    "path": "archive/research/Quickmart_IPO_Legesi_One_Page_Updated_Oct2026.pdf",
+    "size_bytes": 68916,
+    "sha256": "7d4cde063b8c64e2ff7efe08b2ff99e9fd8ef4e0ddbb061c28be97b5985e597b"
+  },
+  {
+    "path": "archive/research/Quickmart_IPO_Updated_Buyside_Research.html",
+    "size_bytes": 2949936,
+    "sha256": "802b77a5c73b78887213424f9109c14ed813c12ef1abf33ad4c931f4fca4cc78"
+  },
+  {
+    "path": "archive/research/Quickmart_IPO_Updated_Legesi_One_Page.html",
+    "size_bytes": 4628,
+    "sha256": "7708a1a2f642d74636c39f176aa01bd7e16bfa15b92e2bf5c84c1b32fae7c5f6"
+  },
+  {
+    "path": "archive/valuation/original-dcf-note.pdf",
+    "size_bytes": 32872,
+    "sha256": "4c3782cd091af1da6d24104313299db8b98bbd57bea7c44f2c1b865ec03b0b66"
+  },
+  {
+    "path": "archive/valuation/original-dcf.xlsx",
+    "size_bytes": 9351,
+    "sha256": "1fa08f39bb49f3bf2b9f6c58434a6c7a61d6a2f6d0338bba1a6a186314fc1fe8"
+  },
+  {
+    "path": "comparables/international-grocery-retailers.md",
+    "size_bytes": 1769,
+    "sha256": "aaaf58e21b58c2aa75abe2508c1d2434e98e90bf451d1daed4aadd6208b92047"
+  },
+  {
+    "path": "graphics/dcf-valuation-dashboard.svg",
+    "size_bytes": 6691,
+    "sha256": "baf1c5f8c006fd97e4c1d12155403fa5da27612f0ff317de6cd29ca27f3d6468"
+  },
+  {
+    "path": "graphics/five-finger-investor-test.png",
+    "size_bytes": 2503063,
+    "sha256": "bd9c08516bb4aa2da03a8d2c1f35e818dd96d75a5bad608e4b9b4bbcb75d7140"
+  },
+  {
+    "path": "graphics/international-comparables.png",
+    "size_bytes": 2196528,
+    "sha256": "53da7dcf3e4c58bd61dcbc34e8810f1897854216d610c8fc1240ac82977c9e3b"
+  },
+  {
+    "path": "graphics/ipo-at-a-glance.png",
+    "size_bytes": 2083568,
+    "sha256": "6ffa9656f7d1724ae77d3cd2401f8c5165c8f47575dfb53d3c8ffe72f37471a2"
+  },
+  {
+    "path": "graphics/pe-sensitivity.png",
+    "size_bytes": 2137058,
+    "sha256": "9e4d1fb876835210cf613e5cb931ba878831c0e88f57f9d9e0a03eae2c46c6fd"
+  },
+  {
+    "path": "research/quickmart-ipo-investment-assessment.md",
+    "size_bytes": 8912,
+    "sha256": "b8cd098448f61c7f186188c33bea63291d966f3253e5d8ae2f24b516a64775ca"
+  },
+  {
+    "path": "research/valuation-methodology.md",
+    "size_bytes": 2103,
+    "sha256": "4e0dcf5ffbe5fc0159f4ce7fca2ac37c37261fcf42c5ddde72dc38e098172fe8"
+  },
+  {
+    "path": "scripts/reproduce_valuation.py",
+    "size_bytes": 5037,
+    "sha256": "899694258a772e3c7b9eaffbc71d44e370def4f5a42be756512f917b14e2b95f"
+  },
+  {
+    "path": "sources/excluded-material.md",
+    "size_bytes": 921,
+    "sha256": "b30e0201c44194c6a62ef19bacae729e26441116b2a3e03ba1cf46c850c4257a"
+  },
+  {
+    "path": "sources/official-document-links.md",
+    "size_bytes": 3222,
+    "sha256": "3469e39ed0414a82bf9dbbc57d64b453233e867bf6b04b4fa1ecf63327276c39"
+  },
+  {
+    "path": "sources/publication-inventory.json",
+    "size_bytes": 4440,
+    "sha256": "ad6e847d79e4b41712f285bc692a5b30dc73dfb8746a01a47c86c7264e63eef4"
+  },
+  {
+    "path": "valuation/assumptions-and-limitations.md",
+    "size_bytes": 2077,
+    "sha256": "022d19c4feb24139a9e1c13bc5a0ad6c9536e8859c1679bb95e86a595a4631f5"
+  },
+  {
+    "path": "valuation/enterprise-value-sensitivity.csv",
+    "size_bytes": 322,
+    "sha256": "8348e7840e08fdf3fa559d4572e6c9b30db86a4eb673d55a07baa58c4030add5"
+  },
+  {
+    "path": "valuation/equity-per-share-sensitivity.csv",
+    "size_bytes": 299,
+    "sha256": "74e35b22293934d7097154021c921f8cb6c5673529d141b6736d3e72995c986c"
+  },
+  {
+    "path": "valuation/forecast-cashflows.csv",
+    "size_bytes": 308,
+    "sha256": "e3d5b4514eadfd884df3891c5e96946ef4c269d26c8679ca312c37e6fcb710ae"
+  },
+  {
+    "path": "valuation/forecast-inputs.json",
+    "size_bytes": 1900,
+    "sha256": "07bdcf0d763a85371027c7bbd0400f3558e28e696576165d24f7770bf58e4b54"
+  },
+  {
+    "path": "valuation/reproduced-results.json",
+    "size_bytes": 877,
+    "sha256": "e0b202a25414946484e00c65a4f7d46814ae1e7b545bc4682546fc84d6c1576d"
+  },
+  {
+    "path": "valuation/revised-enterprise-dcf.xlsx",
+    "size_bytes": 10243,
+    "sha256": "f62b1beb16e40098ecb8b7cc03fdd70b5c1bb8bf53ad05079028ebe322f323c7"
+  },
+  {
+    "path": "valuation/valuation-audit-note.pdf",
+    "size_bytes": 30840,
+    "sha256": "589d0a2e412d46e030075e207586fd91bc3055519012564422640c48b0c18ef2"
+  }
+]

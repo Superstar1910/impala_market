@@ -1,0 +1,73 @@
+{
+  "status": "PROVISIONAL, NOT VALIDATED",
+  "anchor": "end-2026",
+  "wacc": 0.16,
+  "terminal_growth": 0.04,
+  "tax": 0.3,
+  "shares_bn": 4,
+  "ipo_price": 7.5,
+  "net_debt_including_leases_bn": 7.272728,
+  "lease_liabilities_bn": 7.9,
+  "periods": [
+    {
+      "year": 2027,
+      "revenue": 67.435723,
+      "ebit": 5.571191,
+      "ppe_intangible_da": 0.982858,
+      "rou_depreciation": 1.205798,
+      "capex": 1.8,
+      "nwc_outflow": 0,
+      "rental_proxy": 2.05
+    },
+    {
+      "year": 2028,
+      "revenue": 75.52800976,
+      "ebit": 6.193296800320001,
+      "ppe_intangible_da": 1.1329201464,
+      "rou_depreciation": 1.2660879,
+      "capex": 2,
+      "nwc_outflow": 0.040461433800000036,
+      "rental_proxy": 2.1525
+    },
+    {
+      "year": 2029,
+      "revenue": 83.080810736,
+      "ebit": 6.729545669616001,
+      "ppe_intangible_da": 1.24621216104,
+      "rou_depreciation": 1.3293922950000001,
+      "capex": 2.15,
+      "nwc_outflow": 0.03776400488,
+      "rental_proxy": 2.260125
+    },
+    {
+      "year": 2030,
+      "revenue": 90.14267964856,
+      "ebit": 7.211414371884801,
+      "ppe_intangible_da": 1.3521401947284,
+      "rou_depreciation": 1.3958619097500002,
+      "capex": 2.2,
+      "nwc_outflow": 0.03530934456280001,
+      "rental_proxy": 2.37313125
+    },
+    {
+      "year": 2031,
+      "revenue": 96.45266722395921,
+      "ebit": 7.619760710692778,
+      "ppe_intangible_da": 1.446790008359388,
+      "rou_depreciation": 1.4656550052375004,
+      "capex": 2.2,
+      "nwc_outflow": 0.031549937876996025,
+      "rental_proxy": 2.4917878125
+    },
+    {
+      "year": 2032,
+      "revenue": 102.23982725739677,
+      "ebit": 7.974706526076948,
+      "ppe_intangible_da": 1.5335974088609514,
+      "rou_depreciation": 1.5389377554993755,
+      "capex": 2.2,
+      "nwc_outflow": 0.028935800167187792,
+      "rental_proxy": 2.6163772031250003
+    }
+  ]
+}
