@@ -1,0 +1,28 @@
+name: Substack link refresh for review
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * 1'
+permissions:
+  contents: read
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch RSS link metadata
+        run: python scripts/refresh_substack.py
+      - name: Render updated article index
+        run: python scripts/build_reports.py
+      - name: Validate canonical export and compatibility redirects
+        run: python scripts/validate_routes.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: substack-index-for-review
+          path: |
+            docs/
+            canonical/
+          retention-days: 30
