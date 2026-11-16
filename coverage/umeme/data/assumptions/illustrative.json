@@ -1,0 +1,38 @@
+{
+  "label": "HYPOTHETICAL DEMONSTRATION — not current Umeme valuation",
+  "shares": 1000000000,
+  "opening_cash_ugx": 100000000000,
+  "discount_rate": 0.2,
+  "scenarios": [
+    {
+      "name": "zero",
+      "probability": 0.3,
+      "recovery_usd": 0,
+      "fx": 3800,
+      "costs_usd": 1000000,
+      "liabilities_ugx": 20000000000,
+      "reserve_ugx": 5000000000,
+      "years": 2
+    },
+    {
+      "name": "partial",
+      "probability": 0.4,
+      "recovery_usd": 50000000,
+      "fx": 3800,
+      "costs_usd": 2000000,
+      "liabilities_ugx": 40000000000,
+      "reserve_ugx": 5000000000,
+      "years": 2
+    },
+    {
+      "name": "full",
+      "probability": 0.3,
+      "recovery_usd": 100000000,
+      "fx": 3800,
+      "costs_usd": 3000000,
+      "liabilities_ugx": 60000000000,
+      "reserve_ugx": 5000000000,
+      "years": 3
+    }
+  ]
+}

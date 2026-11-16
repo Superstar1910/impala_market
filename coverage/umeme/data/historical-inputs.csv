@@ -1,0 +1,9 @@
+input_id,research_cutoff,description,value,unit,provenance,status
+H001,2025-06-19,buyout_receipt_discussed,118000000,USD,PUB-001,historical_article_not_current_account
+H002,2025-06-19,total_claim_discussed,292000000,USD,PUB-001,historical_article
+H003,2025-06-19,disputed_balance_discussed,174000000,USD,PUB-001,historical_article
+H004,2025-07-01,dividend_discussed,222,UGX_per_share,PUB-002,historical_article
+H005,2025-07-01,then_quoted_market_price,415,UGX_per_share,PUB-002,historical_article_not_live_quote
+H006,2025-07-01,estimated_residual_cash,54,UGX_per_share,PUB-002,author_estimate_not_verified_cash
+H007,2026-03-22,UETCL_asserted_balance_in_chat,542800000000,UGX,recovered_chat,unverified_dated_assertion
+H008,2026-03-22,Umeme_asserted_balance_in_chat,269300000000,UGX,recovered_chat,unverified_dated_assertion
