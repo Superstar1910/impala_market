@@ -1,0 +1,11 @@
+{
+  "country": "Country name",
+  "currency": "ISO code",
+  "status": "planned",
+  "cutoff_date": null,
+  "signal": "unverified",
+  "summary": "Coverage has not yet been validated.",
+  "metrics": [],
+  "drivers": [],
+  "sources": []
+}

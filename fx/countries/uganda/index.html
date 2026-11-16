@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Open evidence-led dashboard for monitoring UGX foreign-exchange pressure." />
+  <title>UGX FX Pressure Watch · Africa FX Watch</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23091718'/%3E%3Cpath d='M15 39l11-12 9 7 14-17' fill='none' stroke='%23D8B56C' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='49' cy='17' r='4' fill='%23F06C57'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../../index.html" aria-label="Africa FX Pressure Watch home">
+      <span class="brand-mark">O</span>
+      <span><strong>AFRICA FX</strong><small>PRESSURE WATCH</small></span>
+    </a>
+    <nav aria-label="Dashboard sections">
+      <a class="active" href="#overview">Overview</a>
+      <a href="#drivers">Drivers</a>
+      <a href="#scenarios">Scenarios</a>
+      <a href="#actions">Actions</a>
+    </nav>
+    <div class="asof"><span class="pulse"></span> AS OF 21 SEP 2026 <button id="themeToggle" aria-label="Toggle colour theme">◐</button></div>
+  </header>
+
+  <main id="top">
+    <section class="hero" id="overview">
+      <div>
+        <p class="eyebrow">MACRO RISK MONITOR · UGANDA</p>
+        <h1>UGX FX<br><em>Pressure Watch</em></h1>
+        <p class="lede">A decision surface for separating temporary dollar scarcity from a broader balance-of-payments deterioration.</p>
+      </div>
+      <div class="signal-panel">
+        <div class="signal-head"><span>CURRENT SIGNAL</span><span class="badge alert">ELEVATED</span></div>
+        <div class="signal-value">Mixed; spot pressure remains</div>
+        <div class="signal-track"><i style="width:78%"></i></div>
+        <div class="signal-scale"><span>Supportive</span><span>Balanced</span><span>Severe</span></div>
+        <p>Trade and reserve fundamentals improved, but tight spot-market USD liquidity has not yet fully reflected that relief.</p>
+      </div>
+    </section>
+
+    <section class="metric-grid" aria-label="Key market indicators">
+      <article class="metric primary">
+        <div class="metric-label">USD / UGX</div>
+        <div class="metric-value">3,925–35</div>
+        <div class="metric-change bad">Spot pressure <span>latest cited range</span></div>
+        <svg class="spark" viewBox="0 0 180 42" role="img" aria-label="USD UGX rising sharply"><path d="M2 36 C28 35 42 33 58 34 S83 29 96 27 S117 20 128 21 S149 8 178 4"/></svg>
+      </article>
+      <article class="metric">
+        <div class="metric-label">BRENT CRUDE</div>
+        <div class="metric-value">~$102.08</div>
+        <div class="metric-change good">↓ 6% <span>from 15 Sep peak</span></div>
+        <svg class="spark orange" viewBox="0 0 180 42" role="img" aria-label="Brent crude rising"><path d="M2 34 C28 37 47 30 65 31 S92 19 106 22 S125 10 140 13 S158 4 178 8"/></svg>
+      </article>
+      <article class="metric">
+        <div class="metric-label">TRADE DEFICIT · JUL</div>
+        <div class="metric-value">~$300m</div>
+        <div class="metric-change good">Narrower <span>vs June</span></div>
+        <svg class="spark green" viewBox="0 0 180 42" role="img" aria-label="Trade deficit improving"><path d="M2 5 C32 7 45 13 62 12 S91 20 108 23 S130 29 143 28 S161 36 178 37"/></svg>
+      </article>
+      <article class="metric">
+        <div class="metric-label">FX RESERVES · JUL</div>
+        <div class="metric-value">~$6.62bn</div>
+        <div class="metric-change good">~4 months <span>import cover</span></div>
+        <div class="stale">DATED OBSERVATION</div>
+      </article>
+    </section>
+
+    <section class="split" id="drivers">
+      <article class="card driver-card">
+        <div class="section-title"><div><span>01</span><h2>Pressure map</h2></div><p>What is moving the shilling now</p></div>
+        <div class="driver-list">
+          <div class="driver-row"><div><span class="driver-icon red">↗</span><div><strong>Oil & import demand</strong><small>Higher crude, refined products and freight raise immediate dollar needs.</small></div></div><b class="high">HIGH</b></div>
+          <div class="driver-row"><div><span class="driver-icon red">≠</span><div><strong>USD liquidity mismatch</strong><small>Corporate demand is arriving faster than contemporaneous inflows.</small></div></div><b class="high">HIGH</b></div>
+          <div class="driver-row"><div><span class="driver-icon amber">−</span><div><strong>Structural trade deficit</strong><small>Persistent drag, although July improved materially from June.</small></div></div><b class="medium">MEDIUM</b></div>
+          <div class="driver-row"><div><span class="driver-icon grey">?</span><div><strong>Portfolio outflows</strong><small>Insufficient current evidence to assign as a principal driver.</small></div></div><b class="unknown">UNVERIFIED</b></div>
+          <div class="driver-row"><div><span class="driver-icon grey">?</span><div><strong>Reserve depletion</strong><small>Needs fresh BoU reserves and intervention data.</small></div></div><b class="unknown">UNVERIFIED</b></div>
+        </div>
+      </article>
+
+      <article class="card diagnosis">
+        <div class="section-title"><div><span>02</span><h2>Working diagnosis</h2></div></div>
+        <blockquote>“A market-liquidity mismatch sitting on top of a persistent structural merchandise deficit.”</blockquote>
+        <div class="logic-flow">
+          <div><b>Oil shock</b><small>Brent above $100</small></div><i>→</i><div><b>USD demand</b><small>Importers & corporates</small></div><i>→</i><div class="outcome"><b>UGX pressure</b><small>3,900–4,000 zone</small></div>
+        </div>
+        <div class="evidence-note"><span>!</span><p><strong>Do not over-diagnose.</strong> July trade flows improved. A 5–6% FX move is not, by itself, evidence that the wider balance of payments deteriorated by the same magnitude.</p></div>
+      </article>
+    </section>
+
+    <section class="card scenario-card" id="scenarios">
+      <div class="section-title"><div><span>03</span><h2>Scenario lens</h2></div><p>Move the assumptions to pressure-test the read-through</p></div>
+      <div class="scenario-workbench">
+        <div class="sliders">
+          <label>Brent crude <output id="oilOut">$105/bbl</output><input id="oil" type="range" min="75" max="125" value="105" step="1"></label>
+          <label>USD / UGX <output id="fxOut">3,920</output><input id="fx" type="range" min="3500" max="4300" value="3920" step="10"></label>
+          <label>Reserves cover <output id="reservesOut">3.9 months</output><input id="reserves" type="range" min="2.5" max="5" value="3.9" step="0.1"></label>
+        </div>
+        <div class="scenario-result">
+          <span>IMPLIED REGIME</span>
+          <strong id="regime">Acute liquidity stress</strong>
+          <p id="regimeText">High oil prices and a weak shilling point to near-term dollar scarcity. Confirm whether pressure persists as energy costs normalize.</p>
+          <div class="score"><i id="scoreBar" style="width:72%"></i></div>
+          <small id="scoreText">PRESSURE SCORE · 72 / 100</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="split lower" id="actions">
+      <article class="card triggers">
+        <div class="section-title"><div><span>04</span><h2>Escalation triggers</h2></div></div>
+        <div class="trigger"><span class="num">01</span><div><strong>Oil falls; UGX does not recover</strong><p>Broadens the diagnosis beyond a temporary energy shock.</p></div></div>
+        <div class="trigger"><span class="num">02</span><div><strong>Import cover moves below 3.5 months</strong><p>Raises buffer and policy-intervention risk.</p></div></div>
+        <div class="trigger"><span class="num">03</span><div><strong>Bank spread stays above 2.5%</strong><p>Signals persistent scarcity or impaired price discovery.</p></div></div>
+        <div class="trigger"><span class="num">04</span><div><strong>Offshore exits accelerate</strong><p>Would add a portfolio channel to corporate USD demand.</p></div></div>
+      </article>
+      <article class="card actions-card">
+        <div class="section-title"><div><span>05</span><h2>Team actions</h2></div><p>Next evidence to close</p></div>
+        <label class="check"><input type="checkbox"><span></span><div><strong>Refresh BoU reserves</strong><small>Latest stock, import cover and intervention signals</small></div><b>Macro</b></label>
+        <label class="check"><input type="checkbox"><span></span><div><strong>Price oil-import bill</strong><small>Translate Brent/freight shock into monthly USD demand</small></div><b>Research</b></label>
+        <label class="check"><input type="checkbox"><span></span><div><strong>Track interbank vs bank offers</strong><small>Monitor scarcity premium and market depth</small></div><b>Treasury</b></label>
+        <label class="check"><input type="checkbox"><span></span><div><strong>Test portfolio-flow channel</strong><small>Government securities holdings and offshore activity</small></div><b>Markets</b></label>
+        <label class="check"><input type="checkbox"><span></span><div><strong>Run portfolio sensitivities</strong><small>UGX at 4,000 / 4,100 and oil at $110 / $120</small></div><b>IC</b></label>
+      </article>
+    </section>
+
+    <section class="bottom-line">
+      <span>INVESTMENT COMMITTEE BOTTOM LINE</span>
+      <p>Maintain elevated FX caution and USD liquidity buffers. Do not yet treat the move as a confirmed reserve or balance-of-payments crisis; the next test is persistence after oil normalizes.</p>
+    </section>
+  </main>
+
+  <footer><span>OAKSTONE CAPITAL · OPEN RESEARCH</span><span>Research cut-off: 21 Sep 2026 · Not investment advice</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>

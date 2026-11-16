@@ -1,0 +1,5 @@
+country,currency,topic,publisher,observation_period,retrieval_date,url,confidence,notes
+Uganda,UGX,Trade balance,Uganda Bureau of Statistics / official reporting,2026-07,2026-09-21,,high,"Source URL to be inserted and independently checked before automated publication"
+Uganda,UGX,FX reserves,Bank of Uganda,2026-07,2026-09-21,,high,"Source URL to be inserted and independently checked before automated publication"
+Uganda,UGX,Spot market,Market reporting,2026-09,2026-09-21,,medium,"Market quotation; verify against primary or licensed data where available"
+Uganda,UGX,Oil price,International market data,2026-09-21,2026-09-21,,medium,"Archive the exact series and timestamp on next refresh"

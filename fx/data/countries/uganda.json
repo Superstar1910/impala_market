@@ -1,0 +1,21 @@
+{
+  "country": "Uganda",
+  "currency": "UGX",
+  "status": "active",
+  "cutoff_date": "2026-09-21",
+  "signal": "mixed-elevated",
+  "summary": "Fundamental relief emerged in July trade and reserves data, while spot-market USD liquidity remained tight and USD/UGX had not retraced.",
+  "metrics": [
+    {"name":"USD/UGX","value":"3,925–3,935","period":"most recent reliable quotation cited in 21 Sep 2026 research","confidence":"medium"},
+    {"name":"Brent","value":"about US$102.08/bbl","period":"21 Sep 2026 research cut-off","confidence":"medium"},
+    {"name":"July merchandise deficit","value":"about US$300m","period":"July 2026","confidence":"high"},
+    {"name":"FX reserves","value":"about US$6.62bn","period":"July 2026","confidence":"high"}
+  ],
+  "drivers": [
+    {"name":"Export receipts","direction":"supportive","confidence":"high"},
+    {"name":"Oil and corporate USD demand","direction":"adverse","confidence":"medium"},
+    {"name":"Reserve buffer","direction":"supportive","confidence":"high"},
+    {"name":"Foreign portfolio flows","direction":"unverified","confidence":"low"}
+  ],
+  "sources":["sources/source-register.csv"]
+}
