@@ -1,0 +1,18 @@
+name: Validate FX country data
+on:
+  push:
+    paths: ['fx/**']
+  pull_request:
+    paths: ['fx/**']
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/validate_data.py

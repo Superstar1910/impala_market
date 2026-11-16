@@ -1,3 +1,22 @@
+# Impala Market
+
+Uganda and East Africa markets research: a bond-market app, a currency-pressure monitor and open stock coverage, published together.
+
+## Repository map
+
+| Path | What it is |
+| --- | --- |
+| `app.py`, `data_loader.py`, `ops.py`, `scripts/`, `docs/` | The bond market intelligence app (Streamlit), described below |
+| `fx/` | FX Pressure Watch (Uganda reference implementation) |
+| `coverage/umeme/` | Umeme recovery and distribution framework |
+| `coverage/mtn-uganda/` | MTN Uganda coverage |
+| `coverage/quickmart/` | Quickmart IPO analysis |
+| `coverage/dangote/` | Dangote Petroleum Refinery IPO analysis |
+
+The FX and coverage folders were merged from their own repositories with history kept. Each keeps its own README and licence. Research outputs are analysis, not personalised advice.
+
+---
+
 # Bond Market Intelligence MVP (Streamlit)
 
 Self-contained clickable MVP for African bond market intelligence (Uganda-first), using local CSV data.
